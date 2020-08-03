@@ -46,7 +46,7 @@ def process_netevent(cpu, data, size):
 
 def process_execevent(cpu, data, size):
     event = n["events"].event(data)
-    print(event.comm, event.pid)
+    print(event.comm, event.pid, event.type, event.argv)
 
 
 parser = argparse.ArgumentParser()
@@ -68,7 +68,7 @@ b.attach_kprobe(event=b.get_syscall_fnname("connect"), fn_name="probe_connect_en
 b["events"].open_perf_buffer(process_netevent)
 
 n = BPF(src_file="process.c")
-n.attach_kprobe(event=n.get_syscall_frame("execve"), fn_name="probe_execve_enter")
+n.attach_kprobe(event=n.get_syscall_fnname("execve"), fn_name="probe_execve_enter")
 n["events"].open_perf_buffer(process_execevent)
 
 
