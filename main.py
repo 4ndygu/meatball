@@ -43,6 +43,12 @@ def process_netevent(cpu, data, size):
                     event.comm, event.pid, ip_address
                 ))
 
+
+def process_execevent(cpu, data, size):
+    event = n["events"].event(data)
+    print(event.comm, event.pid)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument("--action", default="print", choices={"print", "dump", "suspend", "kill"})
 parser.add_argument("--verbose", action="store_true")
@@ -57,15 +63,19 @@ if outs:
 else:
     raise ValueError("No feeds available. Run update_feeds.sh!")
 
-b = BPF(src_file="meatball.c")
+b = BPF(src_file="network.c")
 b.attach_kprobe(event=b.get_syscall_fnname("connect"), fn_name="probe_connect_enter")
-#b.attach_kprobe(event="tcp_v4_connect", fn_name="tcp_v4")
-#b.attach_kprobe(event="udp_sendmsg", fn_name="udp_v4")
-
 b["events"].open_perf_buffer(process_netevent)
+
+n = BPF(src_file="process.c")
+n.attach_kprobe(event=n.get_syscall_frame("execve"), fn_name="probe_execve_enter")
+n["events"].open_perf_buffer(process_execevent)
+
+
 while 1:
     try:
         b.perf_buffer_poll()
+        n.perf_buffer_poll()
     except KeyboardInterrupt:
         exit()
 
